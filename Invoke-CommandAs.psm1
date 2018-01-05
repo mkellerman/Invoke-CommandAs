@@ -1,5 +1,4 @@
 ﻿function Invoke-CommandAs {
-
 <#
 
 .SYNOPSIS
