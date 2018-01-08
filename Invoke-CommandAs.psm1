@@ -1,5 +1,4 @@
 ﻿function Invoke-CommandAs {
-
 <#
 
 .SYNOPSIS
@@ -179,7 +178,7 @@
     If ($ComputerName -or $Session) { 
 
         # Collection the functions to bring with us in the remote session:
-        $_Function = ${Function:Invoke-ScheduledJob}.Ast.Extent.Text
+        $_Function = [PSCustomObject]@{ Name = 'Invoke-ScheduledJob'; Value = ${Function:Invoke-ScheduledJob} }
 
         $Parameters = @{}
         If ($ComputerName)  { $Parameters['ComputerName']  = $ComputerName  }
@@ -192,7 +191,7 @@
         Invoke-Command @Parameters -ScriptBlock {
 
             # Create the functions we packed up with us previously:
-            $Using:_Function | % { Invoke-Expression $_ }
+            $Using:_Function | % { Invoke-Expression "function $($_.Name) { $($_.Value) }" }
 
             $Parameters = @{}
             If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock)  }
