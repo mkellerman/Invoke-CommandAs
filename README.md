@@ -18,19 +18,22 @@
 
 ```
 # Execute Locally.
-Invoke-CommandAs -ScriptBlock { & notepad.exe }
+Invoke-CommandAs -ScriptBlock { Get-Process }
 
-# Execute Remotelly using ComputerName/Credential.
-Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { & notepad.exe }
+# Execute As different Credentials.
+Invoke-CommandAs -ScriptBlock { Get-Process } -As $Credential
 
-# Execute Remotelly using PSSession.
-Invoke-CommandAs -Session $PSSession -ScriptBlock { & notepad.exe }
+# Execute Remotely using ComputerName/Credential.
+Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { Get-Process }
 
-# Execute Remotelly on multiple Remote Computers at the same time.
-Invoke-CommandAs -ComputerName 'VM01', 'VM02' -Credential $Credential -ScriptBlock { & notepad.exe }
+# Execute Remotely using PSSession.
+Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process }
 
-# Execute Remotelly as Job.
-Invoke-CommandAs -Session $PSSession -ScriptBlock { & notepad.exe } -AsJob
+# Execute Remotely on multiple Computers at the same time.
+Invoke-CommandAs -ComputerName 'VM01', 'VM02' -Credential $Credential -ScriptBlock { Get-Process }
+
+# Execute Remotely as Job.
+Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
 ```
 
 ## Install Module (PSv5):
