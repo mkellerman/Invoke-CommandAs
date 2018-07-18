@@ -1,4 +1,4 @@
-﻿function Invoke-CommandAs {
+function Invoke-CommandAs {
 
 <#
 
@@ -117,6 +117,12 @@
         [Parameter(Mandatory = $false, ParameterSetName = 'PSSession')]
         [System.Management.Automation.PSCredential]$As,
     
+        [Parameter(Mandatory = $false)]
+        [Switch]$AsSystem,
+    
+        [Parameter(Mandatory = $false)]
+        [Switch]$RunElevated,
+    
         [Parameter(Mandatory = $false, ParameterSetName = 'ComputerName')]
         [Parameter(Mandatory = $false, ParameterSetName = 'PSSession')]
         [Switch]$AsJob,
@@ -131,32 +137,66 @@
     
     )
 
-    function Invoke-ScheduledJob {
+
+    function Invoke-ScheduledTask {
 
         [cmdletbinding()]
         Param(
         [Parameter(Mandatory = $true)][ScriptBlock]$ScriptBlock,
         [Parameter(Mandatory = $false)][Object[]]$ArgumentList,
-        [Parameter(Mandatory = $false)][PSCredential]$Credential
+        [Parameter(Mandatory = $false)][PSCredential]$Credential,
+        [Parameter(Mandatory = $false)][Switch]$AsSystem,
+        [Parameter(Mandatory = $false)][Switch]$RunElevated
+
         )
 
-        Begin { $ScheduledJobName = [guid]::NewGuid().Guid }
+        Begin { 
+        
+            $JobName = [guid]::NewGuid().Guid 
+
+        }
     
         Process {
         
             Try {
 
-                Write-Debug "Registering ScheduledJob: $ScheduledJobName"
-                $JobParameters = @{ Name = $ScheduledJobName }
-                If ($ScriptBlock)  { $JobParameters['ScriptBlock'] = $ScriptBlock }
+                Write-Verbose "Register-ScheduledJob: $JobName"
+                $JobParameters = @{ Name = $JobName }
+                If ($ScriptBlock)  { $JobParameters['ScriptBlock']  = $ScriptBlock }
                 If ($ArgumentList) { $JobParameters['ArgumentList'] = $ArgumentList }
-                If ($Credential)   { $JobParameters['Credential'] = $Credential }
-                $ScheduledJob = Register-ScheduledJob -RunNow @JobParameters -ErrorAction Stop
+                If ($Credential)   { $JobParameters['Credential']   = $Credential }
+                $ScheduledJob = Register-ScheduledJob @JobParameters -ErrorAction Stop
 
-                Write-Debug "Get ScheduledJob"
-                While (-Not($Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue)) { Sleep -m 100 }
+                # Do a little bit of inception. Use ScheduledTask to execute the ScheduledJob.
 
-                Write-Debug "Receive ScheduledJob"
+                # EncodeCommand
+                $Command = ($ScheduledJob.PSExecutionArgs.TrimEnd('"') -Split '-Command "')[1..9999] -Join '-Command "'
+                $Bytes = [System.Text.Encoding]::Unicode.GetBytes($Command)
+                $EncodedCommand = [Convert]::ToBase64String($Bytes)
+
+                Write-Verbose "Register-ScheduledTask"
+                $TaskParameters = @{ TaskName = $JobName }
+                $TaskParameters['Action'] = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoLogo -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand ${EncodedCommand}"
+                $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
+                If ($AsSystem) {
+                    $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
+                } ElseIf ($Credential) {
+                    $TaskParameters['User'] = $Credential.Username
+                    $TaskParameters['Password'] = $Credential.GetNetworkCredential().Password
+                    $TaskParameters['RunLevel'] = $RunLevel
+                } Else {
+                    $TaskParameters['RunLevel'] = $RunLevel
+                }
+                $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
+
+                Write-Verbose "Start-ScheduledTask"
+                $CimJob = $ScheduledTask | Start-ScheduledTask -AsJob -ErrorAction Stop
+                $CimJob | Wait-Job | Remove-Job -Force -Confirm:$False
+
+                Write-Verbose "Get-ScheduledJob"
+                While (-Not($Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200 }
+
+                Write-Verbose "Receive-ScheduledJob"
                 $Job | Wait-Job | Receive-Job -Wait -AutoRemoveJob
 
             } Catch { Throw $_ }
@@ -165,11 +205,14 @@
 
         End {
 
+            If ($ScheduledTask) {
+                Write-Verbose "Unregister ScheduledTask"
+                Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
+            }
+
             If ($ScheduledJob) {
-        
-                Write-Debug "Remove ScheduledJob"
+                Write-Verbose "Unregister ScheduledJob"
                 Try { $ScheduledJob | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null } Catch {}
-        
             }
 
         }
@@ -179,7 +222,7 @@
     If ($ComputerName -or $Session) { 
 
         # Collection the functions to bring with us in the remote session:
-        $_Function = ${Function:Invoke-ScheduledJob}.Ast.Extent.Text
+        $_Function = ${Function:Invoke-ScheduledTask}.Ast.Extent.Text
 
         $Parameters = @{}
         If ($ComputerName)  { $Parameters['ComputerName']  = $ComputerName  }
@@ -195,11 +238,13 @@
             $Using:_Function | % { Invoke-Expression $_ }
 
             $Parameters = @{}
-            If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock)  }
+            If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock) }
             If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList }
-            If ($Using:As)           { $Parameters['Credential']   = $Using:As   }
+            If ($Using:As)           { $Parameters['Credential']   = $Using:As           }
+            If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True               }
+            If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True               }
 
-            Invoke-ScheduledJob @Parameters
+            Invoke-ScheduledTask @Parameters
 
         }
 
@@ -208,9 +253,11 @@
         $Parameters = @{}
         If ($ScriptBlock)  { $Parameters['ScriptBlock']  = $ScriptBlock  }
         If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
-        If ($As)           { $Parameters['Credential']   = $As   }
+        If ($As)           { $Parameters['Credential']   = $As           }
+        If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
+        If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
 
-        Invoke-ScheduledJob @Parameters
+        Invoke-ScheduledTask @Parameters
 
     }
         
