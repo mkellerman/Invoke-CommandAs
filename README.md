@@ -47,7 +47,7 @@ Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
 
 ## How to see if it works:
 ```
-$ScriptBlock = { [http://System.Security .Principal.Windowsidentity]::GetCurrent() }
+$ScriptBlock = { [System.Security.Principal.Windowsidentity]::GetCurrent() }
 Invoke-CommandAs -ScriptBlock $ScriptBlock -AsSystem
 ```
 
