@@ -3,14 +3,17 @@
 ```
 .SYNOPSIS
 
-    Invoke Command using ScheduledJob with Credential on remote computer.
+    Invoke Command as System/User on Local/Remote computer using ScheduleTask.
 
 .DESCRIPTION
 
-    Invoke a ScheduledJob on machine (Remote if ComputerName/Session is provided).
-    ScheduledJob will be executed with current user credentials if no -As credential are provided.
+    Invoke Command as System/User on Local/Remote computer using ScheduleTask.
+    ScheduledJob will be executed with current user credentials if no -As <credential> or -AsSystem is provided.
 
-    Because the ScheduledJob is executed by the Task Scheduler, it runs as if it was ran locally. And not from within the Powershell Session.
+    Using ScheduledJob as they are ran in the background and the output can be retreived by any other process.
+    Using ScheduledTask to Run the ScheduledJob, since you can allow Tasks to run as System or provide any credentials.
+    
+    Because the ScheduledJob is executed by the Task Scheduler, it is invoked locally as a seperate process and not from within the current Powershell Session.
     Resolving the Double Hop limitations by Powershell Remote Sessions. 
 
 ```
@@ -19,6 +22,9 @@
 ```
 # Execute Locally.
 Invoke-CommandAs -ScriptBlock { Get-Process }
+
+# Execute As System.
+Invoke-CommandAs -ScriptBlock { Get-Process } -AsSystem
 
 # Execute As different Credentials.
 Invoke-CommandAs -ScriptBlock { Get-Process } -As $Credential
@@ -29,11 +35,20 @@ Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { Get
 # Execute Remotely using PSSession.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process }
 
+# Execute Remotely using PSSession, and execute ScriptBlock as SYSTEM and RunElevated.
+Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsSystem -RunElevated
+
 # Execute Remotely on multiple Computers at the same time.
 Invoke-CommandAs -ComputerName 'VM01', 'VM02' -Credential $Credential -ScriptBlock { Get-Process }
 
 # Execute Remotely as Job.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
+```
+
+## How to see if it works:
+```
+$ScriptBlock = { [http://System.Security .Principal.Windowsidentity]::GetCurrent() }
+Invoke-CommandAs -ScriptBlock $ScriptBlock -AsSystem
 ```
 
 ## Install Module (PSv5):

@@ -32,7 +32,7 @@ CompanyName = 'Marc R Kellerman'
 Copyright = '(c) 2017 MKellerman. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Invoke Command as System or User on local and remote computer using ScheduleJob and ScheduleTask.'
+Description = 'Invoke Command as System/User on Local/Remote computer using ScheduleTask.'
 
 # Minimum version of the Windows PowerShell engine required by this module
 # PowerShellVersion = ''
