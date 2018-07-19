@@ -130,6 +130,9 @@ function Invoke-CommandAs {
     
         [Parameter(Mandatory = $false)]
         [Switch]$AsSystem,
+
+        [Parameter(Mandatory = $false)]
+        [String]$AsGMSA,
     
         [Parameter(Mandatory = $false)]
         [Switch]$RunElevated,
@@ -191,6 +194,10 @@ function Invoke-CommandAs {
                 $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
                 If ($AsSystem) {
                     $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
+                
+                } ElseIf ($AsGMSA) {
+                    $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
+
                 } ElseIf ($Credential) {
                     $TaskParameters['User'] = $Credential.Username
                     $TaskParameters['Password'] = $Credential.GetNetworkCredential().Password
