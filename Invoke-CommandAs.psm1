@@ -164,6 +164,7 @@ function Invoke-CommandAs {
         [Parameter(Mandatory = $false)][Object[]]$ArgumentList,
         [Parameter(Mandatory = $false)][PSCredential]$Credential,
         [Parameter(Mandatory = $false)][Switch]$AsSystem,
+        [Parameter(Mandatory = $false)][String]$AsGMSA,
         [Parameter(Mandatory = $false)][Switch]$RunElevated
 
         )
@@ -264,6 +265,7 @@ function Invoke-CommandAs {
             If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList }
             If ($Using:As)           { $Parameters['Credential']   = $Using:As           }
             If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True               }
+            If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA       }
             If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True               }
 
             Invoke-ScheduledTask @Parameters
@@ -277,6 +279,7 @@ function Invoke-CommandAs {
         If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
         If ($As)           { $Parameters['Credential']   = $As           }
         If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
+        If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA       }
         If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
 
         Invoke-ScheduledTask @Parameters
