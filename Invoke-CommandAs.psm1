@@ -128,8 +128,6 @@ function Invoke-CommandAs {
         [Parameter(Mandatory = $false)]
         [Object[]]$ArgumentList,
     
-        [Parameter(Mandatory = $false, ParameterSetName = 'ComputerName')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'PSSession')]
         [System.Management.Automation.PSCredential]$As,
     
         [Parameter(Mandatory = $false)]
@@ -179,10 +177,14 @@ function Invoke-CommandAs {
         
             Try {
 
+                $JobName = [guid]::NewGuid().guid
+
                 Write-Verbose "Register-ScheduledJob: $JobName"
                 $JobParameters = @{ }
                 If ($ScriptBlock)  { $JobParameters['ScriptBlock']  = $ScriptBlock }
                 If ($ArgumentList) { $JobParameters['ArgumentList'] = $ArgumentList }
+                If ($Credential)   { $JobParameters['Credential'] = $Credential }
+                If ($RunElevated)  { $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated }
 
                 # Little bit of inception to get $Using variables to work.
                 # Collect $Using:variables, Rename and set new variables inside the job.
@@ -215,7 +217,7 @@ function Invoke-CommandAs {
                     `$JobParameters = @{}
                     If (`$Parameters.ScriptBlock)  { `$JobParameters['ScriptBlock']  = [ScriptBlock]::Create(`$Parameters.ScriptBlock) }
                     If (`$Parameters.ArgumentList) { `$JobParameters['ArgumentList'] = `$Parameters.ArgumentList }
-   
+    
                     If (`$Parameters.Using) { 
                         `$Parameters.Using | % { Set-Variable -Name `$_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize(`$_.Value)) }
                         Start-Job @JobParameters | Receive-Job -Wait -AutoRemoveJob
@@ -226,36 +228,42 @@ function Invoke-CommandAs {
 "@)
 
                 $ScheduledJob = Register-ScheduledJob -Name $JobName -ScriptBlock $JobScriptBlock -ArgumentList $JobParameters -ErrorAction Stop
-                # Use ScheduledTask to execute the ScheduledJob to execute with the desired credentials.
 
-                Write-Verbose "Register-ScheduledTask"
-                $TaskParameters = @{ TaskName = $JobName }
-                $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
-                $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
-                If ($AsSystem) {
-                    $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
-                
-                } ElseIf ($AsGMSA) {
-                    $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
+                If (($AsSystem) -or ($AsGMSA)) {
 
-                } ElseIf ($Credential) {
-                    $TaskParameters['User'] = $Credential.Username
-                    $TaskParameters['Password'] = $Credential.GetNetworkCredential().Password
-                    $TaskParameters['RunLevel'] = $RunLevel
+                    # Use ScheduledTask to execute the ScheduledJob to execute with the desired credentials.
+
+                    Write-Verbose "Register-ScheduledTask"
+                    $TaskParameters = @{ TaskName = $JobName }
+                    $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
+                    $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
+                    If ($AsSystem) {
+                        $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
+                    } ElseIf ($AsGMSA) {
+                        $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
+                    }
+                    $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
+
+                    Write-Verbose "Start-ScheduledTask"
+                    $CimJob = $ScheduledTask | Start-ScheduledTask -AsJob -ErrorAction Stop
+                    $CimJob | Wait-Job | Remove-Job -Force -Confirm:$False
+
+                    Write-Verbose "Get-ScheduledJob"
+                    While (-Not($Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200 }
+
+                    Write-Verbose "Receive-ScheduledJob"
+                    $Job | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+
                 } Else {
-                    $TaskParameters['RunLevel'] = $RunLevel
+
+                    # It no other credentials where provided, execute the ScheduledJob as is.
+                    Write-Verbose "Start-ScheduledTask"
+                    $Job = $ScheduledJob.StartJob()
+
+                    Write-Verbose "Receive-ScheduledJob"
+                    $Job  | Receive-Job -Wait -AutoRemoveJob
+    
                 }
-                $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
-
-                Write-Verbose "Start-ScheduledTask"
-                $CimJob = $ScheduledTask | Start-ScheduledTask -AsJob -ErrorAction Stop
-                $CimJob | Wait-Job | Remove-Job -Force -Confirm:$False
-
-                Write-Verbose "Get-ScheduledJob"
-                While (-Not($Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200 }
-
-                Write-Verbose "Receive-ScheduledJob"
-                $Job | Wait-Job | Receive-Job -Wait -AutoRemoveJob
 
             } Catch { Throw $_ }
 
