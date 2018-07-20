@@ -180,22 +180,57 @@ function Invoke-CommandAs {
             Try {
 
                 Write-Verbose "Register-ScheduledJob: $JobName"
-                $JobParameters = @{ Name = $JobName }
+                $JobParameters = @{ }
                 If ($ScriptBlock)  { $JobParameters['ScriptBlock']  = $ScriptBlock }
                 If ($ArgumentList) { $JobParameters['ArgumentList'] = $ArgumentList }
-                If ($Credential)   { $JobParameters['Credential']   = $Credential }
-                $ScheduledJob = Register-ScheduledJob @JobParameters -ErrorAction Stop
 
-                # Do a little bit of inception. Use ScheduledTask to execute the ScheduledJob.
+                # Little bit of inception to get $Using variables to work.
+                # Collect $Using:variables, Rename and set new variables inside the job.
 
-                # EncodeCommand
-                $Command = ($ScheduledJob.PSExecutionArgs.TrimEnd('"') -Split '-Command "')[1..9999] -Join '-Command "'
-                $Bytes = [System.Text.Encoding]::Unicode.GetBytes($Command)
-                $EncodedCommand = [Convert]::ToBase64String($Bytes)
+                # Inspired by Boe Prox, and his https://github.com/proxb/PoshRSJob module
+                #      and by Warren Framem and his https://github.com/RamblingCookieMonster/Invoke-Parallel module
+
+                $JobParameters['Using'] = @()
+                $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
+                If ($UsingVariables) {
+
+                    $ScriptText = $ScriptBlock.Ast.Extent.Text
+                    $ScriptOffSet = $ScriptBlock.Ast.Extent.StartOffset
+                    ForEach ($SubExpression in ($UsingVariables.SubExpression | Sort { $_.Extent.StartOffset } -Descending)) {
+
+                        $Name = '__using_{0}' -f (([Guid]::NewGuid().guid) -Replace '-')
+                        $Expression = $SubExpression.Extent.Text.Replace('$Using:','$').Replace('${Using:','${'); 
+                        $Value = [System.Management.Automation.PSSerializer]::Serialize((Invoke-Expression $Expression))
+                        $JobParameters['Using'] += [PSCustomObject]@{ Name = $Name; Value = $Value } 
+                        $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
+
+                    }
+                    $JobParameters['ScriptBlock'] = Invoke-Expression $ScriptText
+                }
+
+                $JobScriptBlock = [ScriptBlock]::Create(@"
+
+                    Param(`$Parameters)
+
+                    `$JobParameters = @{}
+                    If (`$Parameters.ScriptBlock)  { `$JobParameters['ScriptBlock']  = [ScriptBlock]::Create(`$Parameters.ScriptBlock) }
+                    If (`$Parameters.ArgumentList) { `$JobParameters['ArgumentList'] = `$Parameters.ArgumentList }
+   
+                    If (`$Parameters.Using) { 
+                        `$Parameters.Using | % { Set-Variable -Name `$_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize(`$_.Value)) }
+                        Start-Job @JobParameters | Receive-Job -Wait -AutoRemoveJob
+                    } Else {
+                        Invoke-Command @JobParameters
+                    }
+
+"@)
+
+                $ScheduledJob = Register-ScheduledJob -Name $JobName -ScriptBlock $JobScriptBlock -ArgumentList $JobParameters -ErrorAction Stop
+                # Use ScheduledTask to execute the ScheduledJob to execute with the desired credentials.
 
                 Write-Verbose "Register-ScheduledTask"
                 $TaskParameters = @{ TaskName = $JobName }
-                $TaskParameters['Action'] = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoLogo -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand ${EncodedCommand}"
+                $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
                 $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
                 If ($AsSystem) {
                     $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
