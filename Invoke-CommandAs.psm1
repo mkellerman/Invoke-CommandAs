@@ -73,6 +73,10 @@ function Invoke-CommandAs {
 .PARAMETER AsSystem
 
     ScheduledJob will be executed using 'NT AUTHORITY\SYSTEM'. 
+
+.PARAMETER AsGMSA
+
+    ScheduledJob will be executed as the specified GMSA. For Example, 'domain\gmsa$'
         
 .PARAMETER RunElevated
 
@@ -130,6 +134,9 @@ function Invoke-CommandAs {
     
         [Parameter(Mandatory = $false)]
         [Switch]$AsSystem,
+
+        [Parameter(Mandatory = $false)]
+        [String]$AsGMSA,
     
         [Parameter(Mandatory = $false)]
         [Switch]$RunElevated,
@@ -157,6 +164,7 @@ function Invoke-CommandAs {
         [Parameter(Mandatory = $false)][Object[]]$ArgumentList,
         [Parameter(Mandatory = $false)][PSCredential]$Credential,
         [Parameter(Mandatory = $false)][Switch]$AsSystem,
+        [Parameter(Mandatory = $false)][String]$AsGMSA,
         [Parameter(Mandatory = $false)][Switch]$RunElevated
 
         )
@@ -191,6 +199,10 @@ function Invoke-CommandAs {
                 $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
                 If ($AsSystem) {
                     $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
+                
+                } ElseIf ($AsGMSA) {
+                    $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
+
                 } ElseIf ($Credential) {
                     $TaskParameters['User'] = $Credential.Username
                     $TaskParameters['Password'] = $Credential.GetNetworkCredential().Password
@@ -253,6 +265,7 @@ function Invoke-CommandAs {
             If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList }
             If ($Using:As)           { $Parameters['Credential']   = $Using:As           }
             If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True               }
+            If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA       }
             If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True               }
 
             Invoke-ScheduledTask @Parameters
@@ -266,6 +279,7 @@ function Invoke-CommandAs {
         If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
         If ($As)           { $Parameters['Credential']   = $As           }
         If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
+        If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA       }
         If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
 
         Invoke-ScheduledTask @Parameters

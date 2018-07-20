@@ -26,6 +26,9 @@ Invoke-CommandAs -ScriptBlock { Get-Process }
 # Execute As System.
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsSystem
 
+# Execute As a GMSA.
+Invoke-CommandAs -ScriptBlock { Get-Process } -AsGMSA 'domain\gmsa$'
+
 # Execute As different Credentials.
 Invoke-CommandAs -ScriptBlock { Get-Process } -As $Credential
 
