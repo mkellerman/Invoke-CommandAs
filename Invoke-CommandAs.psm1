@@ -73,6 +73,10 @@ function Invoke-CommandAs {
 .PARAMETER AsSystem
 
     ScheduledJob will be executed using 'NT AUTHORITY\SYSTEM'. 
+
+.PARAMETER AsGMSA
+
+    ScheduledJob will be executed as the specified GMSA. For Example, 'domain\gmsa$'
         
 .PARAMETER RunElevated
 
