@@ -156,6 +156,8 @@ function Invoke-CommandAs {
 
     function Invoke-ScheduledTask {
 
+        #Requires -Version 3
+        
         [cmdletbinding()]
         Param(
         [Parameter(Mandatory = $true)][ScriptBlock]$ScriptBlock,
