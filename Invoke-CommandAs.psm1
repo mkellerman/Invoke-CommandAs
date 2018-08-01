@@ -235,20 +235,48 @@ function Invoke-CommandAs {
 
                     # Use ScheduledTask to execute the ScheduledJob to execute with the desired credentials.
 
-                    Write-Verbose "Register-ScheduledTask"
-                    $TaskParameters = @{ TaskName = $JobName }
-                    $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
-                    $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
-                    If ($AsSystem) {
-                        $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
-                    } ElseIf ($AsGMSA) {
-                        $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
-                    }
-                    $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
+                    If (Get-Command 'Register-ScheduledTask' -ErrorAction SilentlyContinue) {
 
-                    Write-Verbose "Start-ScheduledTask"
-                    $CimJob = $ScheduledTask | Start-ScheduledTask -AsJob -ErrorAction Stop
-                    $CimJob | Wait-Job | Remove-Job -Force -Confirm:$False
+                        # For Windows 8 / Server 2012 and Newer
+
+                        Write-Verbose "Register-ScheduledTask"
+                        $TaskParameters = @{ TaskName = $ScheduledJob.Name }
+                        $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
+                        $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
+                        If ($AsSystem) {
+                            $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel $RunLevel
+                        } ElseIf ($AsGMSA) {
+                            $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsGMSA -LogonType Password -RunLevel $RunLevel
+                        }
+                        $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
+
+                        Write-Verbose "Start-ScheduledTask"
+                        $CimJob = $ScheduledTask | Start-ScheduledTask -AsJob -ErrorAction Stop
+                        $CimJob | Wait-Job | Remove-Job -Force -Confirm:$False
+
+                    } Else {
+ 
+                        # For Windows 7 / Server 2008 R2
+
+                        Write-Verbose "Register-ScheduledTask"
+                        $ScheduleService = New-Object -ComObject("Schedule.Service")
+                        $ScheduleService.Connect()
+                        $ScheduleTaskFolder = $ScheduleService.GetFolder("\")
+                        $TaskDefinition = $ScheduleService.NewTask(0) 
+                        $TaskAction = $TaskDefinition.Actions.Create(0)
+                        $TaskAction.Path = $ScheduledJob.PSExecutionPath
+                        $TaskAction.Arguments = $ScheduledJob.PSExecutionArgs
+                        If ($AsSystem) {
+                            $ScheduledTask = $ScheduleTaskFolder.RegisterTaskDefinition($ScheduledJob.Name,$TaskDefinition,6,"System",$null,5)
+                        } ElseIf ($AsGMSA) {
+                            # Needs to be tested
+                            $ScheduledTask = $ScheduleTaskFolder.RegisterTaskDefinition($ScheduledJob.Name,$TaskDefinition,6,$AsGMSA,$null,5)
+                        }
+
+                        Write-Verbose "Start-ScheduledTask"
+                        $ScheduledTask.Run($null) | Out-Null
+
+                    }
 
                     Write-Verbose "Get-ScheduledJob"
                     While (-Not($Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue)) { Start-Sleep -Milliseconds 200 }
@@ -275,12 +303,15 @@ function Invoke-CommandAs {
 
             If ($ScheduledTask) {
                 Write-Verbose "Unregister ScheduledTask"
-                Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
+                #Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
             }
 
             If ($ScheduledJob) {
                 Write-Verbose "Unregister ScheduledJob"
-                Try { $ScheduledJob | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null } Catch {}
+                # For Windows 8 / Server 2012 and Newer
+                Try { $ScheduledJob | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null } Catch {} 
+                # For Windows 7 / Server 2008 R2
+                Try { $ScheduleTaskFolder.DeleteTask($ScheduledJob.Name, 0) | Out-Null } Catch {}
             }
 
         }
