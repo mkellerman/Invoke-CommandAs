@@ -127,6 +127,8 @@ function Invoke-CommandAs {
         
 #>
 
+    #Requires -Version 3
+
     [cmdletbinding(DefaultParameterSetName="None")]
     Param(
     
