@@ -180,7 +180,7 @@ function Invoke-CommandAs {
         Param(
         [Parameter(Mandatory = $true)][ScriptBlock]$ScriptBlock,
         [Parameter(Mandatory = $false)][Object[]]$ArgumentList,
-        [Parameter(Mandatory = $false)][PSCredential]$Credential,
+        [Parameter(Mandatory = $false)][System.Management.Automation.PSCredential]$Credential,
         [Parameter(Mandatory = $false)][Switch]$AsSystem,
         [Parameter(Mandatory = $false)][String]$AsGMSA,
         [Parameter(Mandatory = $false)][Switch]$RunElevated
