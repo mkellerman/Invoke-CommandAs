@@ -153,7 +153,6 @@ function Invoke-CommandAs {
     
     )
 
-
     function Invoke-ScheduledTask {
 
         #Requires -Version 3
@@ -209,7 +208,7 @@ function Invoke-CommandAs {
                         $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
 
                     }
-                    $JobParameters['ScriptBlock'] = Invoke-Expression $ScriptText
+                    $JobParameters['ScriptBlock'] = [ScriptBlock]::Create($ScriptText)
                 }
 
                 $JobScriptBlock = [ScriptBlock]::Create(@"
@@ -320,29 +319,49 @@ function Invoke-CommandAs {
 
     If ($ComputerName -or $Session) { 
 
-        # Collection the functions to bring with us in the remote session:
+        # Collect the functions to bring with us in the remote session:
         $_Function = ${Function:Invoke-ScheduledTask}.Ast.Extent.Text
 
+        # Collect the $Using variables to load in the remote session:
+        $_Using = @()
+        $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
+        If ($UsingVariables) {
+
+            $ScriptText = $ScriptBlock.Ast.Extent.Text
+            $ScriptOffSet = $ScriptBlock.Ast.Extent.StartOffset
+            ForEach ($SubExpression in ($UsingVariables.SubExpression | Sort { $_.Extent.StartOffset } -Descending)) {
+
+                $Name = '__using_{0}' -f (([Guid]::NewGuid().guid) -Replace '-')
+                $Expression = $SubExpression.Extent.Text.Replace('$Using:','$').Replace('${Using:','${'); 
+                $Value = [System.Management.Automation.PSSerializer]::Serialize((Invoke-Expression $Expression))
+                $_Using += [PSCustomObject]@{ Name = $Name; Value = $Value } 
+                $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
+
+            }
+            $ScriptBlock = [ScriptBlock]::Create($ScriptText.TrimStart("{").TrimEnd("}"))
+        }
+
         $Parameters = @{}
-        If ($ComputerName)  { $Parameters['ComputerName']  = $ComputerName  }
-        If ($Credential)    { $Parameters['Credential']    = $Credential    }
-        If ($Session)       { $Parameters['Session']       = $Session       }
-        If ($AsJob)         { $Parameters['AsJob']         = $AsJob         }
-        If ($JobName)       { $Parameters['JobName']       = $JobName       }
-        If ($ThrottleLimit) { $Parameters['ThrottleLimit'] = $ThrottleLimit }
+        If ($ComputerName)   { $Parameters['ComputerName']   = $ComputerName   }
+        If ($Credential)     { $Parameters['Credential']     = $Credential     }
+        If ($Session)        { $Parameters['Session']        = $Session        }
+        If ($AsJob)          { $Parameters['AsJob']          = $AsJob          }
+        If ($JobName)        { $Parameters['JobName']        = $JobName        }
+        If ($ThrottleLimit)  { $Parameters['ThrottleLimit']  = $ThrottleLimit  }
 
         Invoke-Command @Parameters -ScriptBlock {
 
-            # Create the functions we packed up with us previously:
+            # Create the functions/variables we packed up with us previously:
             $Using:_Function | % { Invoke-Expression $_ }
+            $Using:_Using | % { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
 
             $Parameters = @{}
             If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock) }
-            If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList }
-            If ($Using:As)           { $Parameters['Credential']   = $Using:As           }
-            If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True               }
-            If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA       }
-            If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True               }
+            If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList                       }
+            If ($Using:As)           { $Parameters['Credential']   = $Using:As                                 }
+            If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True                                     }
+            If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA                             }
+            If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True                                     }
 
             Invoke-ScheduledTask @Parameters
 
@@ -351,12 +370,12 @@ function Invoke-CommandAs {
     } Else {
 
         $Parameters = @{}
-        If ($ScriptBlock)  { $Parameters['ScriptBlock']  = $ScriptBlock  }
-        If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
-        If ($As)           { $Parameters['Credential']   = $As           }
-        If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
-        If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA       }
-        If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
+        If ($ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($ScriptBlock)  }
+        If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList                        }
+        If ($As)           { $Parameters['Credential']   = $As                                  }
+        If ($AsSystem)     { $Parameters['AsSystem']     = $True                                }
+        If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA                              }
+        If ($RunElevated)  { $Parameters['RunElevated']  = $True                                }
 
         Invoke-ScheduledTask @Parameters
 
