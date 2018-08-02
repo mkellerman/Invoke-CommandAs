@@ -64,6 +64,23 @@ function Invoke-CommandAs {
         
     The param keyword lists the local variables that are used in the command. ArgumentList supplies the values of the variables, in the order that they are listed.
         
+.PARAMETER Authentication
+
+    Specifies the mechanism that is used to authenticate user credentials. The acceptable values for this parameter are:
+        Default
+        Basic
+        Credssp
+        Digest
+        Kerberos
+        Negotiate
+        NegotiateWithImplicitCredential
+
+    The default value is Default.
+
+    CredSSP authentication is available only in Windows Vista, Windows Server 2008, and later versions of the Windows operating system.
+    For more information about the values of this parameter, see AuthenticationMechanism Enumeration in the MSDN library.
+    Caution: Credential Security Support Provider (CredSSP) authentication, in which the user's credentials are passed to a remote computer to be authenticated, is designed for commands that require authentication on more than one resource, such as accessing a remote network share. This mechanism increases the security risk of the remote operation. If the remote computer is compromised, the credentials that are passed to it can be used to control the network session.
+        
 .PARAMETER As
 
     ScheduledJob will be executed using this user. Specifies a user account that has permission to perform this action. The default is the current user.
@@ -128,6 +145,8 @@ function Invoke-CommandAs {
         [Parameter(Mandatory = $false)]
         [Object[]]$ArgumentList,
     
+        [System.Management.Automation.Runspaces.AuthenticationMechanism]$Authentication,
+
         [System.Management.Automation.PSCredential]$As,
     
         [Parameter(Mandatory = $false)]
@@ -208,7 +227,7 @@ function Invoke-CommandAs {
                         $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
 
                     }
-                    $JobParameters['ScriptBlock'] = [ScriptBlock]::Create($ScriptText)
+                    $JobParameters['ScriptBlock'] = [ScriptBlock]::Create($ScriptText.TrimStart("{").TrimEnd("}"))
                 }
 
                 $JobScriptBlock = [ScriptBlock]::Create(@"
@@ -345,6 +364,7 @@ function Invoke-CommandAs {
         If ($ComputerName)   { $Parameters['ComputerName']   = $ComputerName   }
         If ($Credential)     { $Parameters['Credential']     = $Credential     }
         If ($Session)        { $Parameters['Session']        = $Session        }
+        If ($Authentication) { $Parameters['Authentication'] = $Authentication }
         If ($AsJob)          { $Parameters['AsJob']          = $AsJob          }
         If ($JobName)        { $Parameters['JobName']        = $JobName        }
         If ($ThrottleLimit)  { $Parameters['ThrottleLimit']  = $ThrottleLimit  }
@@ -370,7 +390,7 @@ function Invoke-CommandAs {
     } Else {
 
         $Parameters = @{}
-        If ($ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($ScriptBlock)  }
+        If ($ScriptBlock)  { $Parameters['ScriptBlock']  = $ScriptBlock  }
         If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList                        }
         If ($As)           { $Parameters['Credential']   = $As                                  }
         If ($AsSystem)     { $Parameters['AsSystem']     = $True                                }
