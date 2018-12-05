@@ -323,7 +323,10 @@ function Invoke-CommandAs {
 
             If ($ScheduledTask) {
                 Write-Verbose "Unregister ScheduledTask"
-                #Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
+                # For Windows 8 / Server 2012 and Newer
+                Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
+                # For Windows 7 / Server 2008 R2
+                Try { $ScheduleTaskFolder.DeleteTask($ScheduledTask.Name, 0) | Out-Null } Catch {}
             }
 
             If ($ScheduledJob) {
