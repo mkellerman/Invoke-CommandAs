@@ -323,7 +323,7 @@ function Invoke-CommandAs {
 
             If ($ScheduledTask) {
                 Write-Verbose "Unregister ScheduledTask"
-                #Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
+                Try { $ScheduledTask | Unregister-ScheduledTask -Confirm:$False } Catch {}
             }
 
             If ($ScheduledJob) {
