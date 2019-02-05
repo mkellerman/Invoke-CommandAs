@@ -30,7 +30,7 @@ Invoke-CommandAs -ScriptBlock { Get-Process } -AsSystem
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsGMSA 'domain\gmsa$'
 
 # Execute As different Credentials.
-Invoke-CommandAs -ScriptBlock { Get-Process } -As $Credential
+Invoke-CommandAs -ScriptBlock { Get-Process } -AsCredential $Credential
 
 # Execute Remotely using ComputerName/Credential.
 Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { Get-Process }
