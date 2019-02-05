@@ -1,3 +1,9 @@
+[![PSGallery Version](https://img.shields.io/powershellgallery/v/Invoke-CommandAs.svg?style=for-the-badge&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/Invoke-CommandAs/)
+[![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/Invoke-CommandAs.svg?style=for-the-badge&label=Downloads)](https://www.powershellgallery.com/packages/Invoke-CommandAs/)
+
+[![Azure Pipeline](https://img.shields.io/azure-devops/build/mkellerman/Invoke-CommandAs/8.svg?style=for-the-badge&label=Azure%20Pipeline)](https://dev.azure.com/mkellerman/Invoke-CommandAs/_build?definitionId=8)
+
+
 # Invoke-CommandAs
 
 ```
