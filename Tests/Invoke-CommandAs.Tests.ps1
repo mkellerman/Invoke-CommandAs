@@ -3,7 +3,7 @@ Try { Set-BuildEnvironment -Path "${PSScriptRoot}\.." -ErrorAction SilentlyConti
 Remove-Module $ENV:BHProjectName -ErrorAction SilentlyContinue -Force -Confirm:$False
 $Script:Module = Import-Module $ENV:BHPSModuleManifest -Force -PassThru
 
-Describe 'Get-Module -Name PSTwitterAPI' {
+Describe 'Get-Module -Name Invoke-CommandAs' {
     Context 'Strict mode' {
 
         Set-StrictMode -Version Latest

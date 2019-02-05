@@ -56,7 +56,7 @@ task UpdateManifest {
 
         [System.Version]$Version = New-Object -TypeName System.Version -ArgumentList ($PSGalleryVersion.Major, $PSGalleryVersion.Minor, ($PSGalleryVersion.Build + 1))
         Write-Output -InputObject ('Updated Version   : {0}' -f $Version)
-        Update-ModuleManifest -ModuleVersion $Version -Path .\PSTwitterAPI\PSTwitterAPI.psd1 # -ReleaseNotes $ReleaseNotes
+        Update-ModuleManifest -ModuleVersion $Version -Path .\Invoke-CommandAs\Invoke-CommandAs.psd1 # -ReleaseNotes $ReleaseNotes
 
     }
 
@@ -83,7 +83,7 @@ task PublishModule -If ($Configuration -eq 'Production') {
                 ErrorAction = 'Stop'
             }
             Publish-Module @params
-            Write-Output -InputObject ('PSTwitterAPI PowerShell Module version published to the PowerShell Gallery')
+            Write-Output -InputObject ('Invoke-CommandAs PowerShell Module version published to the PowerShell Gallery')
 
         }
         else

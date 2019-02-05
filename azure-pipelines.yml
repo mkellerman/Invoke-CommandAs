@@ -27,10 +27,10 @@ steps:
     reportDirectory: '$(System.DefaultWorkingDirectory)/TestResults'
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: PSTwitterAPI'
+  displayName: 'Publish Artifact: Invoke-CommandAs'
   inputs:
-    PathtoPublish: '$(System.DefaultWorkingDirectory)/PSTwitterAPI'
-    ArtifactName: PSTwitterAPI
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/Invoke-CommandAs'
+    ArtifactName: Invoke-CommandAs
 
 - powershell: 'Invoke-Build -Configuration Production -Task UpdateManifest, PublishModule'
   displayName: 'Publish PowerShell Module'
