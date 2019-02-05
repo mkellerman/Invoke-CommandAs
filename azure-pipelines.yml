@@ -1,0 +1,36 @@
+name: $(Build.DefinitionName)_$(Date:yyyyMMdd)
+
+resources:
+- repo: self
+
+queue:
+  name: Hosted VS2017
+
+steps:
+- powershell: './Invoke-CommandAs.bootstrap.ps1'
+  displayName: 'Invoke Bootstrap'
+
+- powershell: 'Invoke-Build -Configuration Production -Task Test'
+  displayName: 'Invoke Pester Tests'
+
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
+  inputs:
+    testResultsFormat: NUnit
+    testResultsFiles: 'TestResults-*.xml'
+    searchFolder: '$(System.DefaultWorkingDirectory)/TestResults'
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish Code Coverage'
+  inputs:
+    summaryFileLocation: '$(System.DefaultWorkingDirectory)/TestResults/CodeCoverage-*.xml'
+    reportDirectory: '$(System.DefaultWorkingDirectory)/TestResults'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: PSTwitterAPI'
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/PSTwitterAPI'
+    ArtifactName: PSTwitterAPI
+
+- powershell: 'Invoke-Build -Configuration Production -Task UpdateManifest, PublishModule'
+  displayName: 'Publish PowerShell Module'
