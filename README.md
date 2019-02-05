@@ -3,7 +3,6 @@
 
 [![Azure Pipeline](https://img.shields.io/azure-devops/build/mkellerman/Invoke-CommandAs/8.svg?style=for-the-badge&label=Azure%20Pipeline)](https://dev.azure.com/mkellerman/Invoke-CommandAs/_build?definitionId=8)
 
-
 # Invoke-CommandAs
 
 ```
