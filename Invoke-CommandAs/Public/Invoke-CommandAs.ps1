@@ -1,5 +1,7 @@
 function Invoke-CommandAs {
 
+    #Requires -Version 3.0
+
     <#
     
     .SYNOPSIS
@@ -179,11 +181,13 @@ function Invoke-CommandAs {
         
         )
     
+        $IsVerbose = $PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent
+
         If ($AsCredential -or $AsSystem -or $AsGMSA) {
     
         If ($ComputerName -or $Session) { 
     
-            Write-Verbose "Invoke-ScheduledTask (Remote)"
+            Write-Verbose "$(Get-Date): CommandAs: Invoke: Remote"
     
             # Collect the functions to bring with us in the remote session:
             $_Function = ${Function:Invoke-ScheduledTask}.Ast.Extent.Text
@@ -217,27 +221,48 @@ function Invoke-CommandAs {
             If ($ThrottleLimit)  { $Parameters['ThrottleLimit']  = $ThrottleLimit  }
     
             Invoke-Command @Parameters -ScriptBlock {
-    
-                # Create the functions/variables we packed up with us previously:
-                $Using:_Function | ForEach-Object { Invoke-Expression $_ }
-                $Using:_Using | ForEach-Object { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
-    
-                $Parameters = @{}
-                If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock) }
-                If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList                       }
-                If ($Using:AsCredential) { $Parameters['AsCredential'] = $Using:AsCredential                       }
-                If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True                                     }
-                If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA                             }
-                If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True                                     }
-    
-                Invoke-ScheduledTask @Parameters
+                
+                If ($PSVersionTable.PSVersion.Major -lt 3) {
+
+                    $ErrorMsg = "The function 'Invoke-ScheduledTask' cannot be run because it contained a '#requires' " + `
+                                "statement for PowerShell 3.0. The version of PowerShell that is required by the " + `
+                                "module does not match the remotly running version of PowerShell $($PSVersionTable.PSVersion.ToString())."
+                    Throw $ErrorMsg
+                    Return 
+
+                }
+
+                    # Create the functions/variables we packed up with us previously:
+                    $Using:_Function | ForEach-Object { Invoke-Expression $_ }
+                    $Using:_Using | ForEach-Object { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
+        
+                    $Parameters = @{}
+                    If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock) }
+                    If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList                       }
+                    If ($Using:AsCredential) { $Parameters['AsCredential'] = $Using:AsCredential                       }
+                    If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True                                     }
+                    If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA                             }
+                    If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True                                     }
+                    If ($Using:IsVerbose)    { $Parameters['Verbose']      = $True                                     }
+        
+                    Invoke-ScheduledTask @Parameters
     
             }
     
         } Else {
     
-            Write-Verbose "Invoke-ScheduledTask (Local)"
+            Write-Verbose "$(Get-Date): CommandAs: Invoke: Local"
     
+            If ($PSVersionTable.PSVersion.Major -lt 3) {
+
+                $ErrorMsg = "The function 'Invoke-ScheduledTask' cannot be run because it contained a '#requires' " + `
+                            "statement for PowerShell 3.0. The version of PowerShell that is required by the " + `
+                            "module does not match the currently running version of PowerShell $($PSVersionTable.PSVersion.ToString())."
+                Throw $ErrorMsg
+                Return 
+
+            }
+
             $Parameters = @{}
             If ($ScriptBlock)  { $Parameters['ScriptBlock']  = $ScriptBlock  }
             If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
@@ -245,14 +270,15 @@ function Invoke-CommandAs {
             If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
             If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA       }
             If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
-    
+            If ($IsVerbose)    { $Parameters['Verbose']      = $True         }
+
             Invoke-ScheduledTask @Parameters
     
         }
         
         } Else {
     
-            Write-Verbose "Invoke-Command"
+            Write-Verbose "$(Get-Date): Command: Invoke"
     
             $Parameters = @{}
             If ($ComputerName)   { $Parameters['ComputerName']   = $ComputerName   }
