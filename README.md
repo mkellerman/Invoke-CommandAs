@@ -25,7 +25,7 @@
 ```
 ## Examples
 
-```
+```powershell
 # Execute Locally.
 Invoke-CommandAs -ScriptBlock { Get-Process }
 
@@ -35,13 +35,20 @@ Invoke-CommandAs -ScriptBlock { Get-Process } -AsSystem
 # Execute As a GMSA.
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsGMSA 'domain\gmsa$'
 
-# Execute As different Credentials.
+# Execute As Credential of another user.
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsCredential $Credential
 
+# Execute As Interactive session of another user.
+Invoke-CommandAs -ScriptBlock { Get-Process } -AsInteractive 'username'
+
+```
+### You can execute all the same commands as above against a remote machine.
+### Use -ComputerName/Credential or -Session to authenticate
+```powershell
 # Execute Remotely using ComputerName/Credential.
 Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { Get-Process }
 
-# Execute Remotely using PSSession.
+# Execute Remotely using Session.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process }
 
 # Execute Remotely using PSSession, and execute ScriptBlock as SYSTEM and RunElevated.
@@ -55,29 +62,18 @@ Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
 ```
 
 ## How to see if it works:
-```
+```powershell
 $ScriptBlock = { [System.Security.Principal.Windowsidentity]::GetCurrent() }
 Invoke-CommandAs -ScriptBlock $ScriptBlock -AsSystem
 ```
 
 ## Install Module (PSv5):
-```
+```powershell
 Install-Module -Name Invoke-CommandAs
 ```    
 
 ## Install Module (PSv4 or earlier):
 ```
-Copy Invoke-CommandAs.psm1 to:
-C:\Program Files\WindowsPowerShell\Modules\Invoke-CommandAs\Invoke-CommandAs.psm1
-```
-
-## Import Module directly from GitHub:
-```
-$WebClient = New-Object Net.WebClient
-$psm1 = $WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs.psm1")
-Invoke-Expression $psm1
-```
-One liner:
-```
-(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs.psm1") | iex
+Copy Invoke-CommandAs folder to:
+C:\Program Files\WindowsPowerShell\Modules\Invoke-CommandAs
 ```

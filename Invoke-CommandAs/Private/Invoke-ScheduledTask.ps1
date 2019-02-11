@@ -8,6 +8,7 @@ function Invoke-ScheduledTask {
     [Parameter(Mandatory = $false)][Object[]]$ArgumentList,
     [Parameter(Mandatory = $false)][System.Management.Automation.PSCredential]$AsCredential,
     [Parameter(Mandatory = $false)][Switch]$AsSystem,
+    [Parameter(Mandatory = $false)][String]$AsInteractive,
     [Parameter(Mandatory = $false)][String]$AsGMSA,
     [Parameter(Mandatory = $false)][Switch]$RunElevated
 
@@ -74,7 +75,7 @@ function Invoke-ScheduledTask {
             Write-Verbose "$(Get-Date): ScheduledJob: Register"
             $ScheduledJob = Register-ScheduledJob @JobParameters -ScriptBlock $JobScriptBlock -ArgumentList $JobArgumentList -ErrorAction Stop
 
-            If (($AsCredential) -or ($AsSystem) -or ($AsGMSA)) {
+            If ($AsSystem -or $AsInteractive -or $AsCredential -or $AsGMSA) {
 
                 # Use ScheduledTask to execute the ScheduledJob to execute with the desired credentials.
 
@@ -86,7 +87,9 @@ function Invoke-ScheduledTask {
                     $TaskParameters = @{ TaskName = $ScheduledJob.Name }
                     $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
                     $RunLevel = If ($RunElevated) { 'Highest' } Else { 'Limited' }
-                    If ($AsCredential) {
+                    If ($AsInteractive) {
+                        $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsInteractive -LogonType Interactive -RunLevel Highest
+                    } ElseIf ($AsCredential) {
                         $TaskParameters['User'] = $AsCredential.GetNetworkCredential().UserName
                         $TaskParameters['Password'] = $AsCredential.GetNetworkCredential().Password
                     } ElseIf ($AsSystem) {
@@ -112,14 +115,20 @@ function Invoke-ScheduledTask {
                     $ScheduleService.Connect()
                     $ScheduleTaskFolder = $ScheduleService.GetFolder("\")
                     $TaskDefinition = $ScheduleService.NewTask(0) 
+                    $TaskDefinition.Principal.RunLevel = $RunElevated.IsPresent
                     $TaskAction = $TaskDefinition.Actions.Create(0)
                     $TaskAction.Path = $ScheduledJob.PSExecutionPath
                     $TaskAction.Arguments = $ScheduledJob.PSExecutionArgs
-
+                    
                     If ($AsCredential) {
                         $Username = $AsCredential.GetNetworkCredential().UserName
                         $Password = $AsCredential.GetNetworkCredential().Password
                         $LogonType = 1
+                    } ElseIf ($AsInteractive) {
+                        $Username = $AsInteractive
+                        $Password = $null
+                        $LogonType = 3
+                        $TaskDefinition.Principal.RunLevel = 1
                     } ElseIf ($AsSystem) {
                         $Username = "System"
                         $Password = $null
@@ -131,10 +140,11 @@ function Invoke-ScheduledTask {
                         $LogonType = 5
                     }
 
-                    $TaskDefinition = $ScheduleTaskFolder.RegisterTaskDefinition($ScheduledJob.Name,$TaskDefinition,6,$Username,$Password,$LogonType)
+
+                    $RegisteredTask = $ScheduleTaskFolder.RegisterTaskDefinition($ScheduledJob.Name,$TaskDefinition,6,$Username,$Password,$LogonType)
 
                     Write-Verbose "$(Get-Date): ScheduleService: Start"
-                    $ScheduledTask = $TaskDefinition.Run($null)
+                    $ScheduledTask = $RegisteredTask.Run($null)
 
                     Write-Verbose "$(Get-Date): ScheduleService: Wait: Start"
                     Do { $ScheduledTaskInfo = $ScheduleTaskFolder.GetTasks(1) | Where-Object Name -eq $ScheduledTask.Name; Start-Sleep -Milliseconds 100 }
@@ -160,10 +170,10 @@ function Invoke-ScheduledTask {
             }
 
             Write-Verbose "$(Get-Date): ScheduledJob: Get"
-            $Job = Get-Job -Name $ScheduledJob.Name
+            $Job = Get-Job -Name $ScheduledJob.Name -ErrorAction SilentlyContinue
 
             Write-Verbose "$(Get-Date): ScheduledJob: Receive"
-            $Job | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            If ($Job) { $Job | Wait-Job | Receive-Job -Wait -AutoRemoveJob }
 
         } Catch { 
             
@@ -173,14 +183,14 @@ function Invoke-ScheduledTask {
         } Finally {
 
             Write-Verbose "$(Get-Date): ScheduledJob: Unregister"
-            If ($ScheduledJob) { Get-ScheduledJob -Id $ScheduledJob.Id -ErrorAction SilentlyContinue | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null }
+            #If ($ScheduledJob) { Get-ScheduledJob -Id $ScheduledJob.Id -ErrorAction SilentlyContinue | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null }
 
             Write-Verbose "$(Get-Date): ScheduledTask: Unregister"
             If ($ScheduledTask) { 
                 If ($UseScheduledTask) {
                     $ScheduledTask | Get-ScheduledTask -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$False | Out-Null
                 } Else {
-                    $ScheduleTaskFolder.DeleteTask($ScheduledTask.Name, 0) | Out-Null 
+                    #$ScheduleTaskFolder.DeleteTask($ScheduledTask.Name, 0) | Out-Null 
                 }
             }
         
