@@ -93,6 +93,10 @@ function Invoke-CommandAs {
     
         ScheduledJob will be executed using 'NT AUTHORITY\SYSTEM'. 
     
+    .PARAMETER AsInteractive
+    
+        ScheduledJob will be executed using another users Interactive session. 
+    
     .PARAMETER AsGMSA
     
         ScheduledJob will be executed as the specified GMSA. For Example, 'domain\gmsa$'
@@ -135,7 +139,7 @@ function Invoke-CommandAs {
         Param(
         
             [Parameter(Mandatory = $false, ParameterSetName = 'ComputerName', Position=0)]
-            [string[]]$ComputerName,
+            [String[]]$ComputerName,
         
             [Parameter(Mandatory = $false, ParameterSetName = 'ComputerName')]
             [System.Management.Automation.PSCredential]$Credential,
@@ -161,6 +165,10 @@ function Invoke-CommandAs {
             [Switch]$AsSystem,
     
             [Parameter(Mandatory = $false)]
+            [Alias("Interactive")]
+            [String]$AsInteractive,
+    
+            [Parameter(Mandatory = $false)]
             [Alias("GMSA")]
             [String]$AsGMSA,
         
@@ -183,7 +191,7 @@ function Invoke-CommandAs {
     
         $IsVerbose = $PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent
 
-        If ($AsCredential -or $AsSystem -or $AsGMSA) {
+        If ($AsSystem -or $AsInteractive -or $AsCredential -or $AsGMSA) {
     
         If ($ComputerName -or $Session) { 
     
@@ -237,13 +245,14 @@ function Invoke-CommandAs {
                     $Using:_Using | ForEach-Object { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
         
                     $Parameters = @{}
-                    If ($Using:ScriptBlock)  { $Parameters['ScriptBlock']  = [ScriptBlock]::Create($Using:ScriptBlock) }
-                    If ($Using:ArgumentList) { $Parameters['ArgumentList'] = $Using:ArgumentList                       }
-                    If ($Using:AsCredential) { $Parameters['AsCredential'] = $Using:AsCredential                       }
-                    If ($Using:AsSystem)     { $Parameters['AsSystem']     = $True                                     }
-                    If ($Using:AsGMSA)       { $Parameters['AsGMSA']       = $Using:AsGMSA                             }
-                    If ($Using:RunElevated)  { $Parameters['RunElevated']  = $True                                     }
-                    If ($Using:IsVerbose)    { $Parameters['Verbose']      = $True                                     }
+                    If ($Using:ScriptBlock)   { $Parameters['ScriptBlock']   = [ScriptBlock]::Create($Using:ScriptBlock) }
+                    If ($Using:ArgumentList)  { $Parameters['ArgumentList']  = $Using:ArgumentList                       }
+                    If ($Using:AsCredential)  { $Parameters['AsCredential']  = $Using:AsCredential                       }
+                    If ($Using:AsSystem)      { $Parameters['AsSystem']      = $True                                     }
+                    If ($Using:AsInteractive) { $Parameters['AsInteractive'] = $Using:AsInteractive                      }
+                    If ($Using:AsGMSA)        { $Parameters['AsGMSA']        = $Using:AsGMSA                             }
+                    If ($Using:RunElevated)   { $Parameters['RunElevated']   = $True                                     }
+                    If ($Using:IsVerbose)     { $Parameters['Verbose']       = $True                                     }
         
                     Invoke-ScheduledTask @Parameters
     
@@ -264,13 +273,14 @@ function Invoke-CommandAs {
             }
 
             $Parameters = @{}
-            If ($ScriptBlock)  { $Parameters['ScriptBlock']  = $ScriptBlock  }
-            If ($ArgumentList) { $Parameters['ArgumentList'] = $ArgumentList }
-            If ($AsCredential) { $Parameters['AsCredential'] = $AsCredential }
-            If ($AsSystem)     { $Parameters['AsSystem']     = $True         }
-            If ($AsGMSA)       { $Parameters['AsGMSA']       = $AsGMSA       }
-            If ($RunElevated)  { $Parameters['RunElevated']  = $True         }
-            If ($IsVerbose)    { $Parameters['Verbose']      = $True         }
+            If ($ScriptBlock)   { $Parameters['ScriptBlock']   = $ScriptBlock   }
+            If ($ArgumentList)  { $Parameters['ArgumentList']  = $ArgumentList  }
+            If ($AsCredential)  { $Parameters['AsCredential']  = $AsCredential  }
+            If ($AsSystem)      { $Parameters['AsSystem']      = $True          }
+            If ($AsInteractive) { $Parameters['AsInteractive'] = $AsInteractive }
+            If ($AsGMSA)        { $Parameters['AsGMSA']        = $AsGMSA        }
+            If ($RunElevated)   { $Parameters['RunElevated']   = $True          }
+            If ($IsVerbose)     { $Parameters['Verbose']       = $True          }
 
             Invoke-ScheduledTask @Parameters
     
