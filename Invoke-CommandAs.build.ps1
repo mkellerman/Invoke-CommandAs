@@ -35,6 +35,28 @@ task Test {
 }
 #endregion
 
+#region Task to create a single Script file
+task CreateScriptFile {
+
+    $ScriptFile = New-Item "${env:BHProjectPath}\Scripts\Invoke-CommandAs.ps1" -ItemType File -Force
+
+    $ModuleManifest = Test-ModuleManifest -Path $env:BHPSModuleManifest
+    [System.Version]$ManifestVersion = $ModuleManifest.Version
+
+    '#####################################################################' | Set-Content -Path $ScriptFile
+    '# Name        : {0}' -f $ModuleManifest.Name | Add-Content -Path $ScriptFile
+    '# Version     : {0}' -f $ManifestVersion | Add-Content -Path $ScriptFile
+    '# Description : {0}' -f $ModuleManifest.Description | Add-Content -Path $ScriptFile
+    '# ProjectUri  : {0}' -f $ModuleManifest.ProjectUri | Add-Content -Path $ScriptFile
+    '# Author      : {0}' -f $ModuleManifest.Author | Add-Content -Path $ScriptFile
+    '#####################################################################' | Add-Content -Path $ScriptFile
+    '' | Add-Content -Path $ScriptFile
+
+    Get-ChildItem "${env:BHModulePath}\*\*.ps1" -Recurse | Get-Content | Add-Content -Path $ScriptFile
+
+}
+#endregion
+
 #region Task to update the Module Manifest file with info from the Changelog in Readme.
 task UpdateManifest {
     # Import PlatyPS. Needed for parsing README for Change Log versions
