@@ -182,14 +182,14 @@ function Invoke-ScheduledTask {
         } Finally {
 
             Write-Verbose "$(Get-Date): ScheduledJob: Unregister"
-            #If ($ScheduledJob) { Get-ScheduledJob -Id $ScheduledJob.Id -ErrorAction SilentlyContinue | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null }
+            If ($ScheduledJob) { Get-ScheduledJob -Id $ScheduledJob.Id -ErrorAction SilentlyContinue | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null }
 
             Write-Verbose "$(Get-Date): ScheduledTask: Unregister"
             If ($ScheduledTask) { 
                 If ($UseScheduledTask) {
-                    #$ScheduledTask | Get-ScheduledTask -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$False | Out-Null
+                    $ScheduledTask | Get-ScheduledTask -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$False | Out-Null
                 } Else {
-                    #$ScheduleTaskFolder.DeleteTask($ScheduledTask.Name, 0) | Out-Null 
+                    $ScheduleTaskFolder.DeleteTask($ScheduledTask.Name, 0) | Out-Null 
                 }
             }
         
