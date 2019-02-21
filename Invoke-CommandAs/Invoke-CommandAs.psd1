@@ -5,7 +5,7 @@
 #               mkellerman@outlook.com
 #               @mkellerman
 #
-# Generated on: 12/13/2017
+# Generated on: 01/01/2019
 #
 
 @{
@@ -14,7 +14,7 @@
 RootModule = 'Invoke-CommandAs.psm1'
 
 # Version number of this module.
-ModuleVersion = '3.1.0'
+ModuleVersion = '3.1.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -29,13 +29,13 @@ Author = 'Marc R Kellerman'
 CompanyName = 'Marc R Kellerman'
 
 # Copyright statement for this module
-Copyright = '(c) 2017 MKellerman. All rights reserved.'
+Copyright = '(c) 2019 MKellerman. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Invoke Command as System/User on Local/Remote computer using ScheduleTask.'
 
 # Minimum version of the Windows PowerShell engine required by this module
-# PowerShellVersion = ''
+PowerShellVersion = '3.0'
 
 # Name of the Windows PowerShell host required by this module
 # PowerShellHostName = ''
@@ -97,13 +97,13 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('PSRemoting','PSExec')
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/mkellerman/Invoke-CommandAs'
 
         # A URL to an icon representing this module.
         # IconUri = ''
