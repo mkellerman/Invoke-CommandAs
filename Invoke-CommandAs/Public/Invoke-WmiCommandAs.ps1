@@ -48,6 +48,7 @@ function Invoke-WmiCommandAs {
 
         [CmdletBinding(DefaultParameterSetName='class', SupportsShouldProcess=$true, ConfirmImpact='Medium', HelpUri='http://go.microsoft.com/fwlink/?LinkID=113346', RemotingCapability='OwnedByCommand')]
         param(
+
             [Parameter(ParameterSetName='class', Mandatory=$true, Position=1)]
             [Alias('Command')]
             [ValidateNotNull()]
@@ -59,6 +60,10 @@ function Invoke-WmiCommandAs {
             [ValidateNotNull()]
             [string]
             ${FilePath},
+        
+            [Alias('Args')]
+            [System.Object[]]
+            ${ArgumentList},
         
             [switch]
             ${AsJob},
@@ -185,12 +190,18 @@ If (`$PSVersionTable.PSVersion.Major -lt 3) {
 
 $(${Function:Invoke-ScheduledTask}.Ast.Extent.Text)
 
+
 `$ScriptBlock = {
     $($ScriptBlock.ToString())
 }
 
+`$ArgumentList = @"
+    $($ArgumentList | ConvertTo-Json -Depth 5 -Compress)
+"`@
+
 `$Parameters = @{}
 `$Parameters['ScriptBlock'] = `$ScriptBlock
+If (`$ArgumentList) { `$Parameters['ArgumentList'] = `${ArgumentList} | ConvertFrom-Json }
 
 $(If ($AsUser)        { "`$Parameters['AsUser'] = New-Object System.Management.Automation.PSCredential ('$($AsUser.GetNetworkCredential().UserName)', (ConvertTo-SecureString '$($AsUser.GetNetworkCredential().Password)' -AsPlainText -Force))" })
 $(If ($AsSystem)      { "`$Parameters['AsSystem'] = ${AsSystem}" })
