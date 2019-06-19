@@ -308,55 +308,100 @@ function Invoke-CommandAs {
                 $ScriptContent = Get-Content -Path $FilePath 
                 $ScriptBlock = [ScriptBlock]::Create($ScriptContent)
             }
+
+            If ($AsCredential -or $AsSystem -or $AsGMSA) {
+        
+            If ($ComputerName -or $Session) { 
+    
+                Write-Verbose "$(Get-Date): CommandAs: Invoke: Remote"
+                                
+                # Collect the functions to bring with us in the remote session:
+                $_Function = ${Function:Invoke-ScheduledTask}.Ast.Extent.Text
+
+                # Collect the $Using variables to load in the remote session:
+                $_Using = @()
+                $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
+                If ($UsingVariables) {
+
+                    $ScriptText = $ScriptBlock.Ast.Extent.Text
+                    $ScriptOffSet = $ScriptBlock.Ast.Extent.StartOffset
+                    ForEach ($SubExpression in ($UsingVariables.SubExpression | Sort-Object { $_.Extent.StartOffset } -Descending)) {
+
+                        $Name = '__using_{0}' -f (([Guid]::NewGuid().guid) -Replace '-')
+                        $Expression = $SubExpression.Extent.Text.Replace('$Using:','$').Replace('${Using:','${'); 
+                        $Value = [System.Management.Automation.PSSerializer]::Serialize((Invoke-Expression $Expression))
+                        $_Using += [PSCustomObject]@{ Name = $Name; Value = $Value } 
+                        $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
+
+                    }
+                    $ScriptBlock = [ScriptBlock]::Create($ScriptText.TrimStart("{").TrimEnd("}"))
+                }
             
-            # Collect the functions to bring with us in the remote session:
-            $_Function = ${Function:Invoke-ScheduledTask}.Ast.Extent.Text
+                Invoke-Command @CommandParameters -ScriptBlock {
+                    
+                    If ($PSVersionTable.PSVersion.Major -lt 3) {
 
-            # Collect the $Using variables to load in the remote session:
-            $_Using = @()
-            $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
-            If ($UsingVariables) {
+                        $ErrorMsg = "The function 'Invoke-ScheduledTask' cannot be run because it contained a '#requires' " + `
+                                    "statement for PowerShell 3.0. The version of PowerShell that is required by the " + `
+                                    "module does not match the remotly running version of PowerShell $($PSVersionTable.PSVersion.ToString())."
+                        Throw $ErrorMsg
+                        Return 
 
-                $ScriptText = $ScriptBlock.Ast.Extent.Text
-                $ScriptOffSet = $ScriptBlock.Ast.Extent.StartOffset
-                ForEach ($SubExpression in ($UsingVariables.SubExpression | Sort-Object { $_.Extent.StartOffset } -Descending)) {
+                    }
 
-                    $Name = '__using_{0}' -f (([Guid]::NewGuid().guid) -Replace '-')
-                    $Expression = $SubExpression.Extent.Text.Replace('$Using:','$').Replace('${Using:','${'); 
-                    $Value = [System.Management.Automation.PSSerializer]::Serialize((Invoke-Expression $Expression))
-                    $_Using += [PSCustomObject]@{ Name = $Name; Value = $Value } 
-                    $ScriptText = $ScriptText.Substring(0, ($SubExpression.Extent.StartOffSet - $ScriptOffSet)) + "`${Using:$Name}" + $ScriptText.Substring(($SubExpression.Extent.EndOffset - $ScriptOffSet))
+                        # Create the functions/variables we packed up with us previously:
+                        $Using:_Function | ForEach-Object { Invoke-Expression $_ }
+                        $Using:_Using | ForEach-Object { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
+            
+                        $Parameters = @{}
+                        If ($Using:ScriptBlock)   { $Parameters['ScriptBlock']   = [ScriptBlock]::Create($Using:ScriptBlock) }
+                        If ($Using:ArgumentList)  { $Parameters['ArgumentList']  = $Using:ArgumentList                       }
+                        If ($Using:AsUser)        { $Parameters['AsUser']        = $Using:AsUser                             }
+                        If ($Using:AsSystem)      { $Parameters['AsSystem']      = $Using:AsSystem.IsPresent                 }
+                        If ($Using:AsInteractive) { $Parameters['AsInteractive'] = $Using:AsInteractive                      }
+                        If ($Using:AsGMSA)        { $Parameters['AsGMSA']        = $Using:AsGMSA                             }
+                        If ($Using:IsVerbose)     { $Parameters['Verbose']       = $Using:IsVerbose                          }
+            
+                        Invoke-ScheduledTask @Parameters
 
                 }
-                $ScriptBlock = [ScriptBlock]::Create($ScriptText.TrimStart("{").TrimEnd("}"))
-            }
-        
-            Invoke-Command @CommandParameters -ScriptBlock {
-                
+
+            } Else {
+
+                Write-Verbose "$(Get-Date): CommandAs: Invoke: Local"
+
                 If ($PSVersionTable.PSVersion.Major -lt 3) {
 
                     $ErrorMsg = "The function 'Invoke-ScheduledTask' cannot be run because it contained a '#requires' " + `
                                 "statement for PowerShell 3.0. The version of PowerShell that is required by the " + `
-                                "module does not match the remotly running version of PowerShell $($PSVersionTable.PSVersion.ToString())."
+                                "module does not match the currently running version of PowerShell $($PSVersionTable.PSVersion.ToString())."
                     Throw $ErrorMsg
                     Return 
 
                 }
 
-                    # Create the functions/variables we packed up with us previously:
-                    $Using:_Function | ForEach-Object { Invoke-Expression $_ }
-                    $Using:_Using | ForEach-Object { Set-Variable -Name $_.Name -Value ([System.Management.Automation.PSSerializer]::Deserialize($_.Value)) }
-        
-                    $Parameters = @{}
-                    If ($Using:ScriptBlock)   { $Parameters['ScriptBlock']   = [ScriptBlock]::Create($Using:ScriptBlock) }
-                    If ($Using:ArgumentList)  { $Parameters['ArgumentList']  = $Using:ArgumentList                       }
-                    If ($Using:AsUser)        { $Parameters['AsUser']        = $Using:AsUser                             }
-                    If ($Using:AsSystem)      { $Parameters['AsSystem']      = $Using:AsSystem.IsPresent                 }
-                    If ($Using:AsInteractive) { $Parameters['AsInteractive'] = $Using:AsInteractive                      }
-                    If ($Using:AsGMSA)        { $Parameters['AsGMSA']        = $Using:AsGMSA                             }
-                    If ($Using:IsVerbose)     { $Parameters['Verbose']       = $Using:IsVerbose                          }
-        
-                    Invoke-ScheduledTask @Parameters
+                $Parameters = @{}
+                If ($ScriptBlock)   { $Parameters['ScriptBlock']   = $ScriptBlock        }
+                If ($ArgumentList)  { $Parameters['ArgumentList']  = $ArgumentList       }
+                If ($AsUser)        { $Parameters['AsUser']        = $AsUser             }
+                If ($AsSystem)      { $Parameters['AsSystem']      = $AsSystem.IsPresent }
+                If ($AsInteractive) { $Parameters['AsInteractive'] = $AsInteractive      }
+                If ($AsGMSA)        { $Parameters['AsGMSA']        = $AsGMSA             }
+                If ($IsVerbose)     { $Parameters['Verbose']       = $IsVerbose          }
+
+                Invoke-ScheduledTask @Parameters
+
+            }
+
+            } Else {
+
+                Write-Verbose "$(Get-Date): Command: Invoke"
+
+                If ($ScriptBlock)  { $CommandParameters['ScriptBlock']   = $ScriptBlock  }
+                If ($ArgumentList) { $CommandParameters['ArgumentList']  = $ArgumentList }
+                If ($FilePath)     { $CommandParameters['FilePath']      = $FilePath     }
+
+                Invoke-Command @CommandParameters
 
             }
 
