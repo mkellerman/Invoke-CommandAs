@@ -14,7 +14,7 @@
 .DESCRIPTION
 
     Invoke Command as System/User on Local/Remote computer using ScheduleTask.
-    ScheduledJob will be executed with current user credentials if no -AsUser <credential> or -AsSystem is provided.
+    ScheduledJob will be executed with current user credentials if no -As <credential> or -AsSystem is provided.
 
     Using ScheduledJob as they are ran in the background and the output can be retreived by any other process.
     Using ScheduledTask to Run the ScheduledJob, since you can allow Tasks to run as System or provide any credentials.
@@ -36,7 +36,7 @@ Invoke-CommandAs -ScriptBlock { Get-Process } -AsSystem
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsGMSA 'domain\gmsa$'
 
 # Execute As Credential of another user.
-Invoke-CommandAs -ScriptBlock { Get-Process } -AsUser $Credential
+Invoke-CommandAs -ScriptBlock { Get-Process } -AsCredential $Credential
 
 # Execute As Interactive session of another user.
 Invoke-CommandAs -ScriptBlock { Get-Process } -AsInteractive 'username'
@@ -55,7 +55,7 @@ Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process }
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsSystem -RunElevated
 
 # Execute Remotely on multiple Computers at the same time.
-Invoke-CommandAs -ComputerName 'VM01', 'VM02' -AsUser $Credential -ScriptBlock { Get-Process }
+Invoke-CommandAs -ComputerName 'VM01', 'VM02' -Credential $Credential -ScriptBlock { Get-Process }
 
 # Execute Remotely as Job.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
