@@ -99,7 +99,7 @@ function Invoke-ScheduledTask {
                     } ElseIf ($AsInteractive) {
                         $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID $AsInteractive -LogonType Interactive -RunLevel Highest
                     } ElseIf ($AsUser) {
-                        $TaskParameters['User'] = $AsUser.GetNetworkCredential().UserName
+                        $TaskParameters['User'] = $AsUser.UserName
                         $TaskParameters['Password'] = $AsUser.GetNetworkCredential().Password
                         $TaskParameters['RunLevel'] = 'Highest'
                     }
