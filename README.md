@@ -81,10 +81,13 @@ C:\Program Files\WindowsPowerShell\Modules\Invoke-CommandAs
 ## Import Module directly from GitHub:
 ```
 $WebClient = New-Object Net.WebClient
-$psm1 = $WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Scripts/Invoke-CommandAs.ps1")
-Invoke-Expression $psm1
+$WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1") | Set-Content -Path ".\Invoke-ScheduledTask.ps1"
+$WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1") | Set-Content -Path ".\Invoke-CommandAs.ps1"
+Import-Module ".\Invoke-ScheduleTask.ps1"
+Import-Module ".\Invoke-CommandAs.ps1"
 ```
-One liner:
+One liners:
 ```
-(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Scripts/Invoke-CommandAs.ps1") | iex
+(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1") | iex
+(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1") | iex
 ```
