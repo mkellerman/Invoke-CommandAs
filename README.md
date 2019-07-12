@@ -88,8 +88,6 @@ Import-Module ".\Invoke-CommandAs.ps1"
 ```
 One liner (dont write to disk):
 ```
-"https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1",
-"https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1" | % {
-    . ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString($_)))
-}
-```
+"Public/Invoke-CommandAs.ps1", "Private/Invoke-ScheduledTask.ps1" | % {
+    . ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/${_}")))
+}```
