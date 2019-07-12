@@ -90,4 +90,5 @@ One liner (dont write to disk):
 ```
 "Public/Invoke-CommandAs.ps1", "Private/Invoke-ScheduledTask.ps1" | % {
     . ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/${_}")))
-}```
+}
+```
