@@ -9,7 +9,8 @@ function Invoke-ScheduledTask {
     [Parameter(Mandatory = $false)][PSCredential][System.Management.Automation.CredentialAttribute()]$AsUser,
     [Parameter(Mandatory = $false)][Switch]$AsSystem,
     [Parameter(Mandatory = $false)][String]$AsInteractive,
-    [Parameter(Mandatory = $false)][String]$AsGMSA
+    [Parameter(Mandatory = $false)][String]$AsGMSA,
+    [Parameter(Mandatory = $false)][Switch]$RunElevated
 
     )
 
@@ -24,7 +25,9 @@ function Invoke-ScheduledTask {
 
             $JobParameters = @{ }
             $JobParameters['Name'] = $JobName
-            $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated
+            If ($RunElevated.IsPresent) {
+                $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated
+            }
 
             $JobArgumentList = @{ }
             If ($ScriptBlock)  { $JobArgumentList['ScriptBlock']  = $ScriptBlock }
@@ -71,7 +74,7 @@ function Invoke-ScheduledTask {
 "@)
 
             Write-Verbose "$(Get-Date): ScheduledJob: Register"
-            $ScheduledJob = Register-ScheduledJob @JobParameters -ScriptBlock $JobScriptBlock -ArgumentList $JobArgumentList -ErrorAction Stop
+            $ScheduledJob = Register-ScheduledJob  @JobParameters -ScriptBlock $JobScriptBlock -ArgumentList $JobArgumentList -ErrorAction Stop
 
             If ($AsSystem -or $AsInteractive -or $AsUser -or $AsGMSA) {
 
@@ -93,9 +96,11 @@ function Invoke-ScheduledTask {
                     } ElseIf ($AsUser) {
                         $TaskParameters['User'] = $AsUser.GetNetworkCredential().UserName
                         $TaskParameters['Password'] = $AsUser.GetNetworkCredential().Password
+                    }
+                    If ($RunElevated.IsPresent) {
                         $TaskParameters['RunLevel'] = 'Highest'
                     }
-
+        
                     $ScheduledTask = Register-ScheduledTask @TaskParameters -ErrorAction Stop
 
                     Write-Verbose "$(Get-Date): ScheduledTask: Start"
