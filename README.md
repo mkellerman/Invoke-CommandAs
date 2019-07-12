@@ -86,8 +86,10 @@ $WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-C
 Import-Module ".\Invoke-ScheduleTask.ps1"
 Import-Module ".\Invoke-CommandAs.ps1"
 ```
-One liners:
+One liner (dont write to disk):
 ```
-(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1") | iex
-(New-Object Net.WebClient).DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1") | iex
+"https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1",
+"https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1" | % {
+    . ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString($_)))
+}
 ```
