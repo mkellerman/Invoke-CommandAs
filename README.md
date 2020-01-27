@@ -51,7 +51,7 @@ Invoke-CommandAs -ComputerName 'VM01' -Credential $Credential -ScriptBlock { Get
 # Execute Remotely using Session.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process }
 
-# Execute Remotely using PSSession, and execute ScriptBlock as SYSTEM and RunElevated.
+# Execute Remotely using PSSession, and execute ScriptBlock as SYSTEM.
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsSystem
 
 # Execute Remotely on multiple Computers at the same time.
