@@ -29,6 +29,27 @@ function Invoke-ScheduledTask {
                 $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated
             }
 
+            # Can't create a schedule job if you're running as Local System.
+            # Workaround to create a temporary user to create the schedule job.
+            # Cleanup the temporary user after the job is done.
+            if ("NT AUTHORITY\SYSTEM" -eq [System.Security.Principal.WindowsIdentity]::GetCurrent().Name) {
+                $schedulerPass = ConvertTo-SecureString (New-Guid).Guid -AsPlainText -Force
+                $schedulerName = "service.scheduler"
+    
+                # Check if the temporary user already exists.
+                # If it doesn't exist then create it.
+                # Else we have to update the password so we can create a credential.
+                if ($false -eq [bool](Get-WmiObject Win32_UserAccount -Filter "LocalAccount='true' and Name='$schedulerName'")) {
+                    New-LocalUser -Name $schedulerName -Password $schedulerPass -Description "For invoking commands as system account" | Out-Null
+                } else {
+                    Set-LocalUser -Name $schedulerName -Password $schedulerPass | Out-Null
+                }
+    
+                $schedulerCred = New-Object System.Management.Automation.PSCredential($schedulerName, $schedulerPass)
+
+                $JobParameters['Credential'] = $schedulerCred
+            }
+
             $JobArgumentList = @{ }
             If ($ScriptBlock)  { $JobArgumentList['ScriptBlock']  = $ScriptBlock }
             If ($ArgumentList) { $JobArgumentList['ArgumentList'] = $ArgumentList }
@@ -185,6 +206,10 @@ function Invoke-ScheduledTask {
             Write-Error $_ 
         
         } Finally {
+
+            if ($schedulerCred) {
+                Remove-LocalUser -Name $schedulerName
+            }
 
             Write-Verbose "$(Get-Date): ScheduledJob: Unregister"
             If ($ScheduledJob) { Get-ScheduledJob -Id $ScheduledJob.Id -ErrorAction SilentlyContinue | Unregister-ScheduledJob -Force -Confirm:$False | Out-Null }
