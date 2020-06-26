@@ -26,7 +26,10 @@ function Invoke-ScheduledTask {
             $JobParameters = @{ }
             $JobParameters['Name'] = $JobName
             If ($RunElevated.IsPresent) {
-                $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated
+                $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated -StartIfOnBattery -ContinueIfGoingOnBattery
+            }
+            Else {
+                $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -StartIfOnBattery -ContinueIfGoingOnBattery
             }
 
             $JobArgumentList = @{ }
