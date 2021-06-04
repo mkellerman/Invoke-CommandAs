@@ -90,6 +90,7 @@ function Invoke-ScheduledTask {
                     Write-Verbose "$(Get-Date): ScheduledTask: Register"
                     $TaskParameters = @{ TaskName = $ScheduledJob.Name }
                     $TaskParameters['Action'] = New-ScheduledTaskAction -Execute $ScheduledJob.PSExecutionPath -Argument $ScheduledJob.PSExecutionArgs
+                    $TaskParameters['Settings'] = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
                     If ($AsSystem) {
                         $TaskParameters['Principal'] = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
                     } ElseIf ($AsGMSA) {
