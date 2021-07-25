@@ -314,7 +314,7 @@ function Invoke-CommandAs {
             $ScriptBlock = [ScriptBlock]::Create($ScriptContent)
         }
 
-        If ($AsUser -or $AsSystem -or $AsGMSA -or $RunElevated) {
+        If ($AsUser -or $AsSystem -or $AsGMSA -or $AsInteractive -or $RunElevated) {
     
             If ($ComputerName -or $Session) { 
 
