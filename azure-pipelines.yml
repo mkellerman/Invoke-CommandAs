@@ -28,8 +28,6 @@ steps:
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: Invoke-CommandAs'
-  env: 
-    NuGetApiKey: $(NuGetApiKey)
   inputs:
     PathtoPublish: '$(System.DefaultWorkingDirectory)/Invoke-CommandAs'
     ArtifactName: Invoke-CommandAs
