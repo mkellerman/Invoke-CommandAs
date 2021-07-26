@@ -100,8 +100,8 @@ task PublishModule -If ($Configuration -eq 'Production') {
 
             # Build a splat containing the required details and make sure to Stop for errors which will trigger the catch
             $params = @{
-                Path        = $env:BHModulePath
-                NuGetApiKey = ${env:NUGETAPIKEY}
+                Path        = "${env:BHModulePath}"
+                NuGetApiKey = "${env:NUGETAPIKEY}"
                 ErrorAction = 'Stop'
             }
             Publish-Module @params
