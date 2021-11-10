@@ -310,7 +310,7 @@ function Invoke-CommandAs {
         }
         
         If ($FilePath) { 
-            $ScriptContent = Get-Content -Path $FilePath 
+            $ScriptContent = Get-Content -Path $FilePath -Raw
             $ScriptBlock = [ScriptBlock]::Create($ScriptContent)
         }
 
