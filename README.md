@@ -82,7 +82,7 @@ C:\Program Files\WindowsPowerShell\Modules\Invoke-CommandAs
 $WebClient = New-Object Net.WebClient
 $WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Private/Invoke-ScheduledTask.ps1") | Set-Content -Path ".\Invoke-ScheduledTask.ps1"
 $WebClient.DownloadString("https://raw.githubusercontent.com/mkellerman/Invoke-CommandAs/master/Invoke-CommandAs/Public/Invoke-CommandAs.ps1") | Set-Content -Path ".\Invoke-CommandAs.ps1"
-Import-Module ".\Invoke-ScheduleTask.ps1"
+Import-Module ".\Invoke-ScheduledTask.ps1"
 Import-Module ".\Invoke-CommandAs.ps1"
 ```
 One liner (dont write to disk):
