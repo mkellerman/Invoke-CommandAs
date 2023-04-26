@@ -60,6 +60,12 @@ Invoke-CommandAs -ComputerName 'VM01', 'VM02' -Credential $Credential -ScriptBlo
 Invoke-CommandAs -Session $PSSession -ScriptBlock { Get-Process } -AsJob
 ```
 
+### Invoke-WmiCommandAs
+```powershell
+# Execute Scriptblock using Invoke-WmiMethod as System to Remote computer.
+Invoke-WmiCommandAs -ScriptBlock $ScriptBlock -ComputerName 'VM01' -Credential $Credential -AsSystem
+```
+
 ## How to see if it works:
 ```powershell
 $ScriptBlock = { [System.Security.Principal.Windowsidentity]::GetCurrent() }
