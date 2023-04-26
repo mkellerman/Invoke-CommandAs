@@ -23,8 +23,10 @@ function Invoke-ScheduledTask {
 
         Try {
 
-            $JobParameters = @{ }
-            $JobParameters['Name'] = $JobName
+            $JobParameters = @{
+                Name = $JobName
+            }
+            If ($AsUser) { $JobParameters['Credential'] = $AsUser}
             If ($RunElevated.IsPresent) {
                 $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -RunElevated -StartIfOnBattery -ContinueIfGoingOnBattery
             }
@@ -32,7 +34,10 @@ function Invoke-ScheduledTask {
                 $JobParameters['ScheduledJobOption'] = New-ScheduledJobOption -StartIfOnBattery -ContinueIfGoingOnBattery
             }
 
-            $JobArgumentList = @{ }
+
+            $JobArgumentList = @{
+                Using = @()
+            }
             If ($ScriptBlock)  { $JobArgumentList['ScriptBlock']  = $ScriptBlock }
             If ($ArgumentList) { $JobArgumentList['ArgumentList'] = $ArgumentList }
 
@@ -42,7 +47,6 @@ function Invoke-ScheduledTask {
             # Inspired by Boe Prox, and his https://github.com/proxb/PoshRSJob module
             #      and by Warren Framem and his https://github.com/RamblingCookieMonster/Invoke-Parallel module
 
-            $JobArgumentList['Using'] = @()
             $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
             If ($UsingVariables) {
 
@@ -77,7 +81,7 @@ function Invoke-ScheduledTask {
 "@)
 
             Write-Verbose "$(Get-Date): ScheduledJob: Register"
-            $ScheduledJob = Register-ScheduledJob  @JobParameters -ScriptBlock $JobScriptBlock -ArgumentList $JobArgumentList -ErrorAction Stop
+            $ScheduledJob = Register-ScheduledJob @JobParameters -ScriptBlock $JobScriptBlock -ArgumentList $JobArgumentList -ErrorAction Stop
 
             If ($AsSystem -or $AsInteractive -or $AsUser -or $AsGMSA) {
 
